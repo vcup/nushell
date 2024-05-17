@@ -35,7 +35,7 @@ use nu_utils::{
 };
 use reedline::{
     CursorConfig, CwdAwareHinter, DefaultCompleter, EditCommand, Emacs, FileBackedHistory,
-    HistorySessionId, Reedline, SqliteBackedHistory, Vi,
+    HistorySessionId, Reedline, SqliteBackedHistory, Vi, RqliteBackedHistory, HistoryStorageDest,
 };
 use std::{
     collections::HashMap,
@@ -560,7 +560,8 @@ fn loop_iteration(ctx: LoopContext) -> (bool, Stack, Reedline) {
         Ok(Signal::Success(s)) => {
             let history_supports_meta = matches!(
                 engine_state.history_config().map(|h| h.file_format),
-                Some(HistoryFileFormat::Sqlite)
+                | Some(HistoryFileFormat::Sqlite)
+                | Some(HistoryFileFormat::Rqlite)
             );
 
             if history_supports_meta {
@@ -1087,7 +1088,7 @@ fn run_shell_integration_osc7(
             "\x1b]7;file://{}{}{}\x1b\\",
             percent_encoding::utf8_percent_encode(
                 hostname.unwrap_or("localhost"),
-                percent_encoding::CONTROLS
+                percent_encoding::CONTROLS,
             ),
             if path.starts_with('/') { "" } else { "/" },
             percent_encoding::utf8_percent_encode(&path, percent_encoding::CONTROLS)
@@ -1191,16 +1192,16 @@ fn setup_history(
         None
     };
 
-    if let Some(path) = crate::config_files::get_history_path(nushell_path, history.file_format) {
-        return update_line_editor_history(
+    match crate::config_files::get_history_dest(nushell_path, history.file_format, history.clone()) {
+        Some(dest) => update_line_editor_history(
             engine_state,
-            path,
+            dest,
             history,
             line_editor,
             history_session_id,
-        );
-    };
-    Ok(line_editor)
+        ),
+        None => Ok(line_editor),
+    }
 }
 
 ///
@@ -1248,24 +1249,32 @@ fn store_history_id_in_engine(engine_state: &mut EngineState, line_editor: &Reed
 
 fn update_line_editor_history(
     engine_state: &mut EngineState,
-    history_path: PathBuf,
+    history_dest: HistoryStorageDest,
     history: HistoryConfig,
     line_editor: Reedline,
     history_session_id: Option<HistorySessionId>,
 ) -> Result<Reedline, ErrReport> {
     let history: Box<dyn reedline::History> = match history.file_format {
         HistoryFileFormat::PlainText => Box::new(
-            FileBackedHistory::with_file(history.max_size as usize, history_path)
+            FileBackedHistory::with_file(history.max_size as usize, history_dest)
                 .into_diagnostic()?,
         ),
         HistoryFileFormat::Sqlite => Box::new(
             SqliteBackedHistory::with_file(
-                history_path.to_path_buf(),
+                history_dest,
                 history_session_id,
                 Some(chrono::Utc::now()),
             )
-            .into_diagnostic()?,
+                .into_diagnostic()?,
         ),
+        HistoryFileFormat::Rqlite => Box::new(
+            RqliteBackedHistory::with_url(
+                history_dest,
+                history_session_id,
+                Some(chrono::Utc::now()),
+            )
+                .into_diagnostic()?,
+        )
     };
     let line_editor = line_editor
         .with_history_session_id(history_session_id)
@@ -1469,7 +1478,7 @@ fn are_session_ids_in_sync() {
     let engine_state = &mut EngineState::new();
     let history = engine_state.history_config().unwrap();
     let history_path =
-        crate::config_files::get_history_path("nushell", history.file_format).unwrap();
+        crate::config_files::get_history_dest("nushell", history.file_format).unwrap();
     let line_editor = reedline::Reedline::create();
     let history_session_id = reedline::Reedline::create_history_session_id();
     let line_editor = update_line_editor_history(

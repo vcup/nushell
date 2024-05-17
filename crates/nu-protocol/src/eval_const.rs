@@ -94,6 +94,9 @@ pub(crate) fn create_nu_constant(engine_state: &EngineState, span: Span) -> Valu
                     HistoryFileFormat::PlainText => {
                         path.push("history.txt");
                     }
+                    HistoryFileFormat::Rqlite => {
+                        path.clear();
+                    }
                 }
                 let canon_hist_path = canonicalize_path(engine_state, &path);
                 Value::string(canon_hist_path.to_string_lossy(), span)

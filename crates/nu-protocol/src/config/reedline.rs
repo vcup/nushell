@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use reedline::HistoryStorageDest;
 
 use super::{extract_value, helper::ReconstructVal};
 use crate::{record, Config, ShellError, Span, Value};
@@ -75,6 +76,8 @@ impl ReconstructVal for NuCursorShape {
 pub enum HistoryFileFormat {
     /// Store history as an SQLite database with additional context
     Sqlite,
+    /// Store history to an rqlite instance with additional context
+    Rqlite,
     /// store history as a plain text file where every line is one command (without any context such as timestamps)
     PlainText,
 }
@@ -86,7 +89,8 @@ impl FromStr for HistoryFileFormat {
         match s.to_ascii_lowercase().as_str() {
             "sqlite" => Ok(Self::Sqlite),
             "plaintext" => Ok(Self::PlainText),
-            _ => Err("expected either 'sqlite' or 'plaintext'"),
+            "rqlite" => Ok(Self::Rqlite),
+            _ => Err("expected one of the following value: 'sqlite' 'plaintext' 'rqlite'"),
         }
     }
 }
@@ -97,9 +101,31 @@ impl ReconstructVal for HistoryFileFormat {
             match self {
                 HistoryFileFormat::Sqlite => "sqlite",
                 HistoryFileFormat::PlainText => "plaintext",
+                HistoryFileFormat::Rqlite => "rqlite",
             },
             span,
         )
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RqliteUrl(Option<url::Url>);
+
+impl Into<Option<HistoryStorageDest>> for RqliteUrl {
+    fn into(self) -> Option<HistoryStorageDest> {
+        self.0.map(HistoryStorageDest::Url)
+    }
+}
+
+impl From<Option<url::Url>> for RqliteUrl {
+    fn from(value: Option<url::Url>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<url::Url> for RqliteUrl {
+    fn from(value: url::Url) -> Self {
+        Self(Some(value))
     }
 }
 

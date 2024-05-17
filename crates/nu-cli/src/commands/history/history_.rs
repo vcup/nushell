@@ -2,7 +2,7 @@ use nu_engine::command_prelude::*;
 use nu_protocol::HistoryFileFormat;
 use reedline::{
     FileBackedHistory, History as ReedlineHistory, HistoryItem, SearchDirection, SearchQuery,
-    SqliteBackedHistory,
+    SqliteBackedHistory, RqliteBackedHistory, HistoryStorageDest,
 };
 
 #[derive(Clone)]
@@ -49,25 +49,37 @@ impl Command for History {
             let long = call.has_flag(engine_state, stack, "long")?;
             let ctrlc = engine_state.ctrlc.clone();
 
-            let mut history_path = config_path;
-            history_path.push("nushell");
-            match history.file_format {
-                HistoryFileFormat::Sqlite => {
-                    history_path.push("history.sqlite3");
+            let history_dest = match history.file_format {
+                | HistoryFileFormat::Sqlite
+                | HistoryFileFormat::PlainText
+                => {
+                    let mut history_path = config_path;
+                    history_path.push("nushell");
+                    if matches!(history.file_format, HistoryFileFormat::Sqlite)
+                    {
+                        history_path.push("history.sqlite3");
+                    } else {
+                        history_path.push("history.txt");
+                    }
+
+                    HistoryStorageDest::Path(history_path)
                 }
-                HistoryFileFormat::PlainText => {
-                    history_path.push("history.txt");
-                }
-            }
+                HistoryFileFormat::Rqlite => match history.rqlite_url.into() {
+                    Some(dest) => dest,
+                    None => unreachable!(),
+                },
+            };
 
             if clear {
-                let _ = std::fs::remove_file(history_path);
-                // TODO: FIXME also clear the auxiliary files when using sqlite
+                if let HistoryStorageDest::Path(history_path) = history_dest {
+                    let _ = std::fs::remove_file(history_path);
+                    // TODO: FIXME also clear the auxiliary files when using sqlite
+                }
                 Ok(PipelineData::empty())
             } else {
                 let history_reader: Option<Box<dyn ReedlineHistory>> = match history.file_format {
                     HistoryFileFormat::Sqlite => {
-                        SqliteBackedHistory::with_file(history_path.clone(), None, None)
+                        SqliteBackedHistory::with_file(history_dest.clone(), None, None)
                             .map(|inner| {
                                 let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
                                 boxed
@@ -77,13 +89,19 @@ impl Command for History {
 
                     HistoryFileFormat::PlainText => FileBackedHistory::with_file(
                         history.max_size as usize,
-                        history_path.clone(),
+                        history_dest.clone(),
                     )
                     .map(|inner| {
                         let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
                         boxed
                     })
                     .ok(),
+                    HistoryFileFormat::Rqlite => RqliteBackedHistory::with_url(history_dest.clone(), None, None)
+                        .map(|inner| {
+                            let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
+                            boxed
+                        })
+                        .ok(),
                 };
 
                 match history.file_format {
@@ -104,7 +122,7 @@ impl Command for History {
                             })
                         })
                         .ok_or(ShellError::FileNotFound {
-                            file: history_path.display().to_string(),
+                            file: history_dest.to_string(),
                             span: head,
                         })?
                         .into_pipeline_data(head, ctrlc)),
@@ -119,10 +137,27 @@ impl Command for History {
                             })
                         })
                         .ok_or(ShellError::FileNotFound {
-                            file: history_path.display().to_string(),
+                            file: history_dest.to_string(),
                             span: head,
                         })?
                         .into_pipeline_data(head, ctrlc)),
+                    HistoryFileFormat::Rqlite => Ok(history_reader
+                        .and_then(|h|
+                            h.search(SearchQuery::everything(SearchDirection::Forward, None)).ok()
+                        )
+                        .map(move |entries| entries.into_iter().enumerate()
+                            .map(move |(idx, entry)|
+                                create_history_record(idx, entry, long, head)
+                            )
+                        )
+                        .ok_or(
+                            ShellError::NetworkFailure {
+                                msg: format!("failed to connect rqlite, url: {}", history_dest),
+                                span: head,
+                            }
+                        )?
+                        .into_pipeline_data(head, ctrlc)
+                    ),
                 }
             }
         } else {

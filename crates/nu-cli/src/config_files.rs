@@ -3,21 +3,20 @@ use crate::util::eval_source;
 use nu_path::canonicalize_with;
 #[cfg(feature = "plugin")]
 use nu_protocol::{engine::StateWorkingSet, report_error, ParseError, PluginRegistryFile, Spanned};
-use nu_protocol::{
-    engine::{EngineState, Stack},
-    report_error_new, HistoryFileFormat, PipelineData,
-};
+use nu_protocol::{engine::{EngineState, Stack}, report_error_new, HistoryFileFormat, PipelineData, HistoryConfig};
 #[cfg(feature = "plugin")]
 use nu_utils::utils::perf;
 use std::path::PathBuf;
+use reedline::HistoryStorageDest;
 
 #[cfg(feature = "plugin")]
 const PLUGIN_FILE: &str = "plugin.msgpackz";
 #[cfg(feature = "plugin")]
 const OLD_PLUGIN_FILE: &str = "plugin.nu";
 
-const HISTORY_FILE_TXT: &str = "history.txt";
-const HISTORY_FILE_SQLITE: &str = "history.sqlite3";
+const HISTORY_DEST_TXT: &str = "history.txt";
+const HISTORY_DEST_SQLITE: &str = "history.sqlite3";
+const HISTORY_DEST_RQLITE: &str = "http://localhost:4001";
 
 #[cfg(feature = "plugin")]
 pub fn read_plugin_file(
@@ -249,15 +248,28 @@ pub fn eval_config_contents(
     }
 }
 
-pub(crate) fn get_history_path(storage_path: &str, mode: HistoryFileFormat) -> Option<PathBuf> {
-    nu_path::config_dir().map(|mut history_path| {
-        history_path.push(storage_path);
-        history_path.push(match mode {
-            HistoryFileFormat::PlainText => HISTORY_FILE_TXT,
-            HistoryFileFormat::Sqlite => HISTORY_FILE_SQLITE,
-        });
-        history_path
-    })
+pub(crate) fn get_history_dest(
+    storage_path: &str,
+    mode: HistoryFileFormat,
+    history_config: HistoryConfig,
+) -> Option<HistoryStorageDest> {
+    match mode {
+        | HistoryFileFormat::PlainText
+        | HistoryFileFormat::Sqlite
+        => nu_path::config_dir().map(|mut history_path| {
+            history_path.push(storage_path);
+            history_path.push(match mode {
+                HistoryFileFormat::PlainText => HISTORY_DEST_TXT,
+                HistoryFileFormat::Sqlite => HISTORY_DEST_SQLITE,
+                HistoryFileFormat::Rqlite => unreachable!(),
+            });
+            HistoryStorageDest::Path(history_path)
+        }),
+        HistoryFileFormat::Rqlite => Some(match history_config.rqlite_url.clone().into() {
+            Some(dest) => dest,
+            None => HistoryStorageDest::Url(url::Url::parse(HISTORY_DEST_RQLITE).unwrap()),
+        }),
+    }
 }
 
 #[cfg(feature = "plugin")]

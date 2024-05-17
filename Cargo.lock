@@ -2854,6 +2854,7 @@ dependencies = [
  "sysinfo",
  "tempfile",
  "unicode-segmentation",
+ "url",
  "uuid",
  "which",
 ]
@@ -3262,6 +3263,7 @@ dependencies = [
  "num-format",
  "os_pipe",
  "pretty_assertions",
+ "reedline",
  "rmp-serde",
  "rstest",
  "serde",
@@ -3271,6 +3273,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "typetag",
+ "url",
 ]
 
 [[package]]
@@ -4851,6 +4854,7 @@ dependencies = [
  "fd-lock",
  "itertools 0.12.1",
  "nu-ansi-term",
+ "rqlite_client",
  "rusqlite",
  "serde",
  "serde_json",
@@ -4860,6 +4864,7 @@ dependencies = [
  "thiserror",
  "unicode-segmentation",
  "unicode-width",
+ "url",
 ]
 
 [[package]]
@@ -4941,6 +4946,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ring"
+version = "0.17.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c17fa4cb658e3583423e915b9f3acc01cceaee1860e33d59ebae66adc3a2dc0d"
+dependencies = [
+ "cc",
+ "cfg-if",
+ "getrandom",
+ "libc",
+ "spin",
+ "untrusted",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "rkyv"
 version = "0.7.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5012,6 +5032,20 @@ name = "roxmltree"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cd14fd5e3b777a7422cca79358c57a8f6e3a703d9ac187448d0daf220c2407f"
+
+[[package]]
+name = "rqlite_client"
+version = "0.0.1-alpha.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f71ec02d5d94b0c22ad049d5e540dc81758c0dff42a9df9ea55dfa047c8b5b51"
+dependencies = [
+ "httpdate",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "ureq",
+ "url",
+]
 
 [[package]]
 name = "rstest"
@@ -5148,6 +5182,37 @@ dependencies = [
  "libc",
  "linux-raw-sys",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rustls"
+version = "0.22.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf4ef73721ac7bcd79b2b315da7779d8fc09718c6b3d2d1b2d94850eb8c18432"
+dependencies = [
+ "log",
+ "ring",
+ "rustls-pki-types",
+ "rustls-webpki",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "rustls-pki-types"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "976295e77ce332211c0d24d92c0e83e50f5c5f046d11082cea19f3df13a3562d"
+
+[[package]]
+name = "rustls-webpki"
+version = "0.102.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3bce581c0dd41bce533ce695a1437fa16a7ab5ac3ccfa99fe1a620a7885eabf"
+dependencies = [
+ "ring",
+ "rustls-pki-types",
+ "untrusted",
 ]
 
 [[package]]
@@ -5574,6 +5639,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "spin"
+version = "0.9.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+
+[[package]]
 name = "sqlparser"
 version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5728,6 +5799,12 @@ dependencies = [
  "rustversion",
  "syn 2.0.60",
 ]
+
+[[package]]
+name = "subtle"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
 name = "supports-color"
@@ -6330,6 +6407,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
+name = "untrusted"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
 name = "ureq"
 version = "2.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6341,9 +6424,13 @@ dependencies = [
  "log",
  "native-tls",
  "once_cell",
+ "rustls",
+ "rustls-pki-types",
+ "rustls-webpki",
  "serde",
  "serde_json",
  "url",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -6749,6 +6836,15 @@ dependencies = [
  "dlib",
  "log",
  "pkg-config",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.26.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3de34ae270483955a94f4b21bdaaeb83d508bb84a01435f393818edb0012009"
+dependencies = [
+ "rustls-pki-types",
 ]
 
 [[package]]
@@ -7194,6 +7290,12 @@ dependencies = [
  "quote",
  "syn 2.0.60",
 ]
+
+[[package]]
+name = "zeroize"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "525b4ec142c6b68a2d10f01f7bbf6755599ca3f81ea53b8431b7dd348f5fdb2d"
 
 [[package]]
 name = "zip"

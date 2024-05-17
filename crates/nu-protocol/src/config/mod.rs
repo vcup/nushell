@@ -9,6 +9,7 @@ use crate::engine::Closure;
 use crate::{record, ShellError, Span, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use url::Url;
 
 pub use self::completer::CompletionAlgorithm;
 pub use self::helper::extract_value;
@@ -28,11 +29,12 @@ mod plugin_gc;
 mod reedline;
 mod table;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryConfig {
     pub max_size: i64,
     pub sync_on_enter: bool,
     pub file_format: HistoryFileFormat,
+    pub rqlite_url: RqliteUrl,
     pub isolation: bool,
 }
 
@@ -42,6 +44,7 @@ impl Default for HistoryConfig {
             max_size: 100_000,
             sync_on_enter: true,
             file_format: HistoryFileFormat::PlainText,
+            rqlite_url: None.into(),
             isolation: false,
         }
     }
@@ -297,6 +300,22 @@ impl Value {
                                             &[key, key2],
                                             value,
                                             &mut errors);
+                                    }
+                                    "rqlite_url" => {
+                                        if let Ok(str) = value.as_str()
+                                        {
+                                            match Url::parse(str) {
+                                                Ok(url) => history.rqlite_url = url.into(),
+                                                Err(err) => report_invalid_value(
+                                                    format!("Failed to parse rqlite url: {}", err).as_str(),
+                                                    span, &mut errors,
+                                                ),
+                                            };
+                                        } else if value.is_nothing() {
+                                            // do nothing
+                                        } else {
+                                            report_invalid_value("should be a string or null", span, &mut errors);
+                                        }
                                     }
                                     _ => {
                                         report_invalid_key(&[key, key2], span, &mut errors);

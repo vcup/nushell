@@ -195,7 +195,7 @@ nu-std = { path = "./crates/nu-std", version = "0.93.1" }
 nu-system = { path = "./crates/nu-system", version = "0.93.1" }
 nu-utils = { path = "./crates/nu-utils", version = "0.93.1" }
 
-reedline = { workspace = true, features = ["bashisms", "sqlite"] }
+reedline = { workspace = true, features = ["bashisms", "sqlite", "rqlite"] }
 
 crossterm = { workspace = true }
 ctrlc = { workspace = true }
