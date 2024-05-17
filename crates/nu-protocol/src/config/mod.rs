@@ -29,6 +29,10 @@ mod plugin_gc;
 mod reedline;
 mod table;
 
+pub const HISTORY_DEST_TXT: &str = "history.txt";
+pub const HISTORY_DEST_SQLITE: &str = "history.sqlite3";
+pub const HISTORY_DEST_RQLITE: &str = "http://localhost:4001";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryConfig {
     pub max_size: i64,
@@ -44,7 +48,7 @@ impl Default for HistoryConfig {
             max_size: 100_000,
             sync_on_enter: true,
             file_format: HistoryFileFormat::PlainText,
-            rqlite_url: None.into(),
+            rqlite_url: RqliteUrl::default(),
             isolation: false,
         }
     }

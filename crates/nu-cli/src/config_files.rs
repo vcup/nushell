@@ -8,15 +8,12 @@ use nu_protocol::{engine::{EngineState, Stack}, report_error_new, HistoryFileFor
 use nu_utils::utils::perf;
 use std::path::PathBuf;
 use reedline::HistoryStorageDest;
+use nu_protocol::{HISTORY_DEST_TXT, HISTORY_DEST_SQLITE};
 
 #[cfg(feature = "plugin")]
 const PLUGIN_FILE: &str = "plugin.msgpackz";
 #[cfg(feature = "plugin")]
 const OLD_PLUGIN_FILE: &str = "plugin.nu";
-
-const HISTORY_DEST_TXT: &str = "history.txt";
-const HISTORY_DEST_SQLITE: &str = "history.sqlite3";
-const HISTORY_DEST_RQLITE: &str = "http://localhost:4001";
 
 #[cfg(feature = "plugin")]
 pub fn read_plugin_file(
@@ -265,10 +262,7 @@ pub(crate) fn get_history_dest(
             });
             HistoryStorageDest::Path(history_path)
         }),
-        HistoryFileFormat::Rqlite => Some(match history_config.rqlite_url.clone().into() {
-            Some(dest) => dest,
-            None => HistoryStorageDest::Url(url::Url::parse(HISTORY_DEST_RQLITE).unwrap()),
-        }),
+        HistoryFileFormat::Rqlite => Some(history_config.rqlite_url.clone().into()),
     }
 }
 

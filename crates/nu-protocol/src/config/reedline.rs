@@ -109,23 +109,29 @@ impl ReconstructVal for HistoryFileFormat {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RqliteUrl(Option<url::Url>);
+pub struct RqliteUrl(url::Url);
 
-impl Into<Option<HistoryStorageDest>> for RqliteUrl {
-    fn into(self) -> Option<HistoryStorageDest> {
-        self.0.map(HistoryStorageDest::Url)
+impl Default for RqliteUrl {
+    fn default() -> Self {
+        Self(url::Url::parse(super::HISTORY_DEST_RQLITE).unwrap())
     }
 }
 
-impl From<Option<url::Url>> for RqliteUrl {
-    fn from(value: Option<url::Url>) -> Self {
-        Self(value)
+impl Into<HistoryStorageDest> for RqliteUrl {
+    fn into(self) -> HistoryStorageDest {
+        HistoryStorageDest::Url(self.0)
+    }
+}
+
+impl Into<url::Url> for RqliteUrl{
+    fn into(self) -> url::Url {
+        self.0
     }
 }
 
 impl From<url::Url> for RqliteUrl {
     fn from(value: url::Url) -> Self {
-        Self(Some(value))
+        Self(value)
     }
 }
 

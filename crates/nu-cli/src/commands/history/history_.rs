@@ -4,6 +4,7 @@ use reedline::{
     FileBackedHistory, History as ReedlineHistory, HistoryItem, SearchDirection, SearchQuery,
     SqliteBackedHistory, RqliteBackedHistory, HistoryStorageDest,
 };
+use nu_protocol::{HISTORY_DEST_TXT, HISTORY_DEST_SQLITE};
 
 #[derive(Clone)]
 pub struct History;
@@ -59,17 +60,14 @@ impl Command for History {
                         history_path.push("nushell");
                         if matches!(history.file_format, HistoryFileFormat::Sqlite)
                         {
-                            history_path.push("history.sqlite3");
+                            history_path.push(HISTORY_DEST_SQLITE);
                         } else {
-                            history_path.push("history.txt");
+                            history_path.push(HISTORY_DEST_TXT);
                         }
 
                         HistoryStorageDest::Path(history_path)
                     }
-                    HistoryFileFormat::Rqlite => match history.rqlite_url.into() {
-                        Some(dest) => dest,
-                        None => unreachable!(),
-                    },
+                    HistoryFileFormat::Rqlite => history.rqlite_url.into(),
                 };
 
                 if clear {
