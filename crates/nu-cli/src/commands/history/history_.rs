@@ -44,39 +44,41 @@ impl Command for History {
         };
 
         // todo for sqlite history this command should be an alias to `open ~/.config/nushell/history.sqlite3 | get history`
-        if let Some(config_path) = nu_path::config_dir() {
-            let clear = call.has_flag(engine_state, stack, "clear")?;
-            let long = call.has_flag(engine_state, stack, "long")?;
-            let ctrlc = engine_state.ctrlc.clone();
+        match nu_path::config_dir() {
+            None => Err(ShellError::ConfigDirNotFound { span: Some(head) }),
+            Some(config_path) => {
+                let clear = call.has_flag(engine_state, stack, "clear")?;
+                let long = call.has_flag(engine_state, stack, "long")?;
+                let ctrlc = engine_state.ctrlc.clone();
 
-            let history_dest = match history.file_format {
-                | HistoryFileFormat::Sqlite
-                | HistoryFileFormat::PlainText
-                => {
-                    let mut history_path = config_path;
-                    history_path.push("nushell");
-                    if matches!(history.file_format, HistoryFileFormat::Sqlite)
-                    {
-                        history_path.push("history.sqlite3");
-                    } else {
-                        history_path.push("history.txt");
+                let history_dest = match history.file_format {
+                    | HistoryFileFormat::Sqlite
+                    | HistoryFileFormat::PlainText
+                    => {
+                        let mut history_path = config_path;
+                        history_path.push("nushell");
+                        if matches!(history.file_format, HistoryFileFormat::Sqlite)
+                        {
+                            history_path.push("history.sqlite3");
+                        } else {
+                            history_path.push("history.txt");
+                        }
+
+                        HistoryStorageDest::Path(history_path)
                     }
+                    HistoryFileFormat::Rqlite => match history.rqlite_url.into() {
+                        Some(dest) => dest,
+                        None => unreachable!(),
+                    },
+                };
 
-                    HistoryStorageDest::Path(history_path)
+                if clear {
+                    if let HistoryStorageDest::Path(history_path) = history_dest {
+                        let _ = std::fs::remove_file(history_path);
+                        // TODO: FIXME also clear the auxiliary files when using sqlite
+                    }
+                    return Ok(PipelineData::empty());
                 }
-                HistoryFileFormat::Rqlite => match history.rqlite_url.into() {
-                    Some(dest) => dest,
-                    None => unreachable!(),
-                },
-            };
-
-            if clear {
-                if let HistoryStorageDest::Path(history_path) = history_dest {
-                    let _ = std::fs::remove_file(history_path);
-                    // TODO: FIXME also clear the auxiliary files when using sqlite
-                }
-                Ok(PipelineData::empty())
-            } else {
                 let history_reader: Option<Box<dyn ReedlineHistory>> = match history.file_format {
                     HistoryFileFormat::Sqlite => {
                         SqliteBackedHistory::with_file(history_dest.clone(), None, None)
@@ -160,8 +162,6 @@ impl Command for History {
                     ),
                 }
             }
-        } else {
-            Err(ShellError::ConfigDirNotFound { span: Some(head) })
         }
     }
 
