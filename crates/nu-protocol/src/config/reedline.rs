@@ -72,7 +72,7 @@ impl ReconstructVal for NuCursorShape {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Copy)]
+#[derive(Serialize, Deserialize, Clone, Debug, Copy, PartialEq)]
 pub enum HistoryFileFormat {
     /// Store history as an SQLite database with additional context
     Sqlite,

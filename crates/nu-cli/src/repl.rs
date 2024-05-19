@@ -237,7 +237,21 @@ fn get_line_editor(
     if let Some(history) = engine_state.history_config() {
         start_time = std::time::Instant::now();
 
-        line_editor = setup_history(nushell_path, engine_state, line_editor, history)?;
+        let file_format = history.file_format;
+        line_editor = match setup_history(nushell_path, engine_state, line_editor, history) {
+            Ok(line_editor) => line_editor,
+            Err(err) => {
+                report_error_new(engine_state, &ShellError::History {
+                    msg: format!("Setup history failed: {err}"),
+                    file_format,
+                });
+
+                let line_editor = Reedline::create();
+                store_history_id_in_engine(engine_state, &line_editor);
+                line_editor
+            }
+        };
+
 
         perf(
             "setup history",

@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{
     ast::Operator, engine::StateWorkingSet, format_error, LabeledError, ParseError, Span, Spanned,
-    Value,
+    Value, HistoryFileFormat,
 };
 
 /// The fundamental error type for the evaluation engine. These cases represent different kinds of errors
@@ -1361,6 +1361,13 @@ On Windows, this would be %USERPROFILE%\AppData\Roaming"#
         help("Set XDG_CONFIG_HOME to an absolute path, or set it to an empty string to ignore it")
     )]
     InvalidXdgConfig { xdg: String, default: String },
+
+    #[error("Error occurred on {file_format:?} history.\n{msg}")]
+    #[diagnostic(code(nu::shell::error_history))]
+    History {
+        msg: String,
+        file_format: HistoryFileFormat,
+    },
 }
 
 // TODO: Implement as From trait
