@@ -4,8 +4,8 @@ use std::io;
 use thiserror::Error;
 
 use crate::{
-    ast::Operator, engine::StateWorkingSet, format_error, LabeledError, ParseError, Span, Spanned,
-    Value, HistoryFileFormat,
+    ast::Operator, engine::StateWorkingSet, format_error, HistoryFileFormat, LabeledError,
+    ParseError, Span, Spanned, Value,
 };
 
 /// The fundamental error type for the evaluation engine. These cases represent different kinds of errors

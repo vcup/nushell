@@ -35,7 +35,7 @@ use nu_utils::{
 };
 use reedline::{
     CursorConfig, CwdAwareHinter, DefaultCompleter, EditCommand, Emacs, FileBackedHistory,
-    HistorySessionId, Reedline, SqliteBackedHistory, Vi, RqliteBackedHistory, HistoryStorageDest,
+    HistorySessionId, HistoryStorageDest, Reedline, RqliteBackedHistory, SqliteBackedHistory, Vi,
 };
 use std::{
     collections::HashMap,
@@ -241,17 +241,19 @@ fn get_line_editor(
         line_editor = match setup_history(nushell_path, engine_state, line_editor, history) {
             Ok(line_editor) => line_editor,
             Err(err) => {
-                report_error_new(engine_state, &ShellError::History {
-                    msg: format!("Setup history failed: {err}"),
-                    file_format,
-                });
+                report_error_new(
+                    engine_state,
+                    &ShellError::History {
+                        msg: format!("Setup history failed: {err}"),
+                        file_format,
+                    },
+                );
 
                 let line_editor = Reedline::create();
                 store_history_id_in_engine(engine_state, &line_editor);
                 line_editor
             }
         };
-
 
         perf(
             "setup history",
@@ -574,8 +576,7 @@ fn loop_iteration(ctx: LoopContext) -> (bool, Stack, Reedline) {
         Ok(Signal::Success(s)) => {
             let history_supports_meta = matches!(
                 engine_state.history_config().map(|h| h.file_format),
-                | Some(HistoryFileFormat::Sqlite)
-                | Some(HistoryFileFormat::Rqlite)
+                |Some(HistoryFileFormat::Sqlite)| Some(HistoryFileFormat::Rqlite)
             );
 
             if history_supports_meta {
@@ -1206,14 +1207,11 @@ fn setup_history(
         None
     };
 
-    match crate::config_files::get_history_dest(nushell_path, history.file_format, history.clone()) {
-        Some(dest) => update_line_editor_history(
-            engine_state,
-            dest,
-            history,
-            line_editor,
-            history_session_id,
-        ),
+    match crate::config_files::get_history_dest(nushell_path, history.file_format, history.clone())
+    {
+        Some(dest) => {
+            update_line_editor_history(engine_state, dest, history, line_editor, history_session_id)
+        }
         None => Ok(line_editor),
     }
 }
@@ -1279,7 +1277,7 @@ fn update_line_editor_history(
                 history_session_id,
                 Some(chrono::Utc::now()),
             )
-                .into_diagnostic()?,
+            .into_diagnostic()?,
         ),
         HistoryFileFormat::Rqlite => Box::new(
             RqliteBackedHistory::with_url(
@@ -1287,8 +1285,8 @@ fn update_line_editor_history(
                 history_session_id,
                 Some(chrono::Utc::now()),
             )
-                .into_diagnostic()?,
-        )
+            .into_diagnostic()?,
+        ),
     };
     let line_editor = line_editor
         .with_history_session_id(history_session_id)

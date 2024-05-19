@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use reedline::HistoryStorageDest;
+use std::str::FromStr;
 
 use super::{extract_value, helper::ReconstructVal};
 use crate::{record, Config, ShellError, Span, Value};
@@ -123,7 +123,7 @@ impl Into<HistoryStorageDest> for RqliteUrl {
     }
 }
 
-impl Into<url::Url> for RqliteUrl{
+impl Into<url::Url> for RqliteUrl {
     fn into(self) -> url::Url {
         self.0
     }

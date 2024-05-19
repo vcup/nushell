@@ -1,11 +1,10 @@
 use nu_engine::command_prelude::*;
 use nu_protocol::HistoryFileFormat;
+use nu_protocol::{HISTORY_DEST_SQLITE, HISTORY_DEST_TXT};
 use reedline::{
-    FileBackedHistory, History as ReedlineHistory, HistoryItem, SearchDirection, SearchQuery,
-    SqliteBackedHistory, RqliteBackedHistory, HistoryStorageDest,
-    ReedlineError, ReedlineErrorVariants,
+    FileBackedHistory, History as ReedlineHistory, HistoryItem, HistoryStorageDest, ReedlineError,
+    ReedlineErrorVariants, RqliteBackedHistory, SearchDirection, SearchQuery, SqliteBackedHistory,
 };
-use nu_protocol::{HISTORY_DEST_TXT, HISTORY_DEST_SQLITE};
 
 #[derive(Clone)]
 pub struct History;
@@ -54,13 +53,10 @@ impl Command for History {
                 let ctrlc = engine_state.ctrlc.clone();
 
                 let history_dest = match history.file_format {
-                    | HistoryFileFormat::Sqlite
-                    | HistoryFileFormat::PlainText
-                    => {
+                    HistoryFileFormat::Sqlite | HistoryFileFormat::PlainText => {
                         let mut history_path = config_path;
                         history_path.push("nushell");
-                        if matches!(history.file_format, HistoryFileFormat::Sqlite)
-                        {
+                        if matches!(history.file_format, HistoryFileFormat::Sqlite) {
                             history_path.push(HISTORY_DEST_SQLITE);
                         } else {
                             history_path.push(HISTORY_DEST_TXT);
@@ -79,27 +75,34 @@ impl Command for History {
                     return Ok(PipelineData::empty());
                 }
                 let history_reader: Box<dyn ReedlineHistory> = match history.file_format {
-                    HistoryFileFormat::Sqlite => SqliteBackedHistory::with_file(history_dest.clone(), None, None)
-                        .map(|inner| {
-                            let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
-                            boxed
-                        })
-                        .map_err(map_shell_io_error(history_dest.clone())),
-                    HistoryFileFormat::PlainText => FileBackedHistory::with_file(history.max_size as usize, history_dest.clone())
-                        .map(|inner| {
-                            let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
-                            boxed
-                        })
-                        .map_err(map_shell_io_error(history_dest.clone())),
-                    HistoryFileFormat::Rqlite => RqliteBackedHistory::with_url(history_dest.clone(), None, None)
-                        .map(|inner| {
-                            let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
-                            boxed
-                        })
-                        .map_err(|err| ShellError::NetworkFailure {
-                            msg: format!("Failed to connect rqlite: {history_dest}\n{err:?}"),
-                            span: head,
-                        }),
+                    HistoryFileFormat::Sqlite => {
+                        SqliteBackedHistory::with_file(history_dest.clone(), None, None)
+                            .map(|inner| {
+                                let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
+                                boxed
+                            })
+                            .map_err(map_shell_io_error(history_dest.clone()))
+                    }
+                    HistoryFileFormat::PlainText => FileBackedHistory::with_file(
+                        history.max_size as usize,
+                        history_dest.clone(),
+                    )
+                    .map(|inner| {
+                        let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
+                        boxed
+                    })
+                    .map_err(map_shell_io_error(history_dest.clone())),
+                    HistoryFileFormat::Rqlite => {
+                        RqliteBackedHistory::with_url(history_dest.clone(), None, None)
+                            .map(|inner| {
+                                let boxed: Box<dyn ReedlineHistory> = Box::new(inner);
+                                boxed
+                            })
+                            .map_err(|err| ShellError::NetworkFailure {
+                                msg: format!("Failed to connect rqlite: {history_dest}\n{err:?}"),
+                                span: head,
+                            })
+                    }
                 }?;
 
                 match history.file_format {
@@ -135,21 +138,23 @@ impl Command for History {
                         .into_pipeline_data(head, ctrlc)),
                     HistoryFileFormat::Rqlite => Ok(history_reader
                         .search(SearchQuery::everything(SearchDirection::Forward, None))
-                        .map(move |entries|
-                            entries.into_iter().enumerate().map(move |(idx, entry)|
+                        .map(move |entries| {
+                            entries.into_iter().enumerate().map(move |(idx, entry)| {
                                 create_history_record(idx, entry, long, head)
-                            )
-                        )
+                            })
+                        })
                         .map_err(|err| ShellError::NetworkFailure {
-                            msg: if let ReedlineError(ReedlineErrorVariants::HistoryDatabaseError(msg)) = err {
+                            msg: if let ReedlineError(
+                                ReedlineErrorVariants::HistoryDatabaseError(msg),
+                            ) = err
+                            {
                                 format!("Failed to connect rqlite: {history_dest}\n{msg}")
                             } else {
                                 format!("Failed to connect rqlite: {history_dest}")
                             },
                             span: head,
                         })?
-                        .into_pipeline_data(head, ctrlc)
-                    ),
+                        .into_pipeline_data(head, ctrlc)),
                 }
             }
         }
@@ -177,10 +182,8 @@ impl Command for History {
 }
 
 fn map_shell_io_error(dest: HistoryStorageDest) -> impl Fn(ReedlineError) -> ShellError {
-    move |err| {
-        ShellError::IOError {
-            msg: format!("{}, {:?}", dest, err),
-        }
+    move |err| ShellError::IOError {
+        msg: format!("{}, {:?}", dest, err),
     }
 }
 

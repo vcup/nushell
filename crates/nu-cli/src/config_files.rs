@@ -3,12 +3,15 @@ use crate::util::eval_source;
 use nu_path::canonicalize_with;
 #[cfg(feature = "plugin")]
 use nu_protocol::{engine::StateWorkingSet, report_error, ParseError, PluginRegistryFile, Spanned};
-use nu_protocol::{engine::{EngineState, Stack}, report_error_new, HistoryFileFormat, PipelineData, HistoryConfig};
+use nu_protocol::{
+    engine::{EngineState, Stack},
+    report_error_new, HistoryConfig, HistoryFileFormat, PipelineData,
+};
+use nu_protocol::{HISTORY_DEST_SQLITE, HISTORY_DEST_TXT};
 #[cfg(feature = "plugin")]
 use nu_utils::utils::perf;
-use std::path::PathBuf;
 use reedline::HistoryStorageDest;
-use nu_protocol::{HISTORY_DEST_TXT, HISTORY_DEST_SQLITE};
+use std::path::PathBuf;
 
 #[cfg(feature = "plugin")]
 const PLUGIN_FILE: &str = "plugin.msgpackz";
@@ -251,17 +254,17 @@ pub(crate) fn get_history_dest(
     history_config: HistoryConfig,
 ) -> Option<HistoryStorageDest> {
     match mode {
-        | HistoryFileFormat::PlainText
-        | HistoryFileFormat::Sqlite
-        => nu_path::config_dir().map(|mut history_path| {
-            history_path.push(storage_path);
-            history_path.push(match mode {
-                HistoryFileFormat::PlainText => HISTORY_DEST_TXT,
-                HistoryFileFormat::Sqlite => HISTORY_DEST_SQLITE,
-                HistoryFileFormat::Rqlite => unreachable!(),
-            });
-            HistoryStorageDest::Path(history_path)
-        }),
+        HistoryFileFormat::PlainText | HistoryFileFormat::Sqlite => {
+            nu_path::config_dir().map(|mut history_path| {
+                history_path.push(storage_path);
+                history_path.push(match mode {
+                    HistoryFileFormat::PlainText => HISTORY_DEST_TXT,
+                    HistoryFileFormat::Sqlite => HISTORY_DEST_SQLITE,
+                    HistoryFileFormat::Rqlite => unreachable!(),
+                });
+                HistoryStorageDest::Path(history_path)
+            })
+        }
         HistoryFileFormat::Rqlite => Some(history_config.rqlite_url.clone().into()),
     }
 }
