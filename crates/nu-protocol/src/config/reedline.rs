@@ -117,15 +117,15 @@ impl Default for RqliteUrl {
     }
 }
 
-impl Into<HistoryStorageDest> for RqliteUrl {
-    fn into(self) -> HistoryStorageDest {
-        HistoryStorageDest::Url(self.0)
+impl From<RqliteUrl> for HistoryStorageDest {
+    fn from(value: RqliteUrl) -> Self {
+        HistoryStorageDest::Url(value.0)
     }
 }
 
-impl Into<url::Url> for RqliteUrl {
-    fn into(self) -> url::Url {
-        self.0
+impl From<RqliteUrl> for url::Url {
+    fn from(value: RqliteUrl) -> Self {
+        value.0
     }
 }
 
